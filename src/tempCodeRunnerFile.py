@@ -1,2 +1,2 @@
-
-    f = open (LIST_JURUSAN_JSON_FILE_PATH, "r")
+num = "12"
+print(len(num))

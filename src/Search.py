@@ -1,72 +1,93 @@
 import re
 import json
-import os
-import psutil
 
-process = psutil.Process(os.getpid())
-print(psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2)
-print(process.memory_info().rss)  # in bytes 
 
-IGNORED_WORDS = ["TEKNIK","TEKNOLOGI","DAN"]
 
-DATA_JSON_FILE_PATH = "src/json/data_13_21.json"
-KODE_FAKULTAS_JSON_FILE_PATH = "src/json/kode_fakultas.json"
-KODE_JURUSAN_JSON_FILE_PATH = "src/json/kode_jurusan.json"
-LIST_FAKULTAS_JSON_FILE_PATH = "src/json/list_fakultas.json"
-LIST_JURUSAN_JSON_FILE_PATH = "src/json/list_jurusan.json"
+def Search(searchquery):
+    if(not searchquery):
+        return []
 
-def dissect(searchquery):
+    numlist,namelist,codelist = dissect(searchquery)
+
+    nimregex = ""
+    for num in numlist:     
+        if isAngkatan(num):
+            nimregex += "(?=.*\d{3}"+str(num)+"\d{3})"
+        else:    
+            nimregex += "(?=.*"+num+")"
+
+    print(codelist)
+    for code in codelist:
+        print ("ASDF")
+        nimregex += "(?=.*"+code[1]+")"
+    
+    print(nimregex)
+
+    datalist = SearchNIMRegex(nimregex)
+    datalist = SearchNameRegex(namelist,datalist)
+
+    return datalist
+
+def Dissect(searchquery):
     regexnum = re.compile(r"\d+", re.IGNORECASE)
     regextext = re.compile(r"[A-z]+", re.IGNORECASE) 
 
-    num = re.findall(regexnum,searchquery)
+    numlist = re.findall(regexnum,searchquery)
 
     text = re.findall(regextext,searchquery)
+    namelist = []
     codelist = []
 
     for word in text:
-        code = searchJson(word)
+        code = SearchJson(word)
         if code:
-            codelist.append(code)
+            for cod in code:
+                codelist.append(cod)
+        else:
+            namelist.append(word)
 
             
-    return num,text,codelist
+            
+    return numlist,namelist,codelist
+ 
+def SearchNIMRegex(nimregex):
+    if not nimregex:
+        return DATA_JSON_FILE_DATA
+
+    result = []
+    for lines in DATA_JSON_FILE_DATA:
+        # print(lines)
+        if(len(lines) == 3):
+            if re.findall(nimregex,lines[1]) or re.findall(nimregex,lines[2]):
+                result.append(lines)
+        else:
+            if re.findall(nimregex,lines[1]):
+                result.append(lines)
+    return result
+
+def SearchNameRegex(namelist, datalist):
+    if not namelist:
+        return datalist
+
+    length = len(namelist)
+    result = [[] for i in range(length)]
     
+    for lines in datalist:
+        counter = 0
+        for name in namelist:
+            if re.findall(name,lines[0],re.IGNORECASE):
+                counter+=1    
+        if counter > 0:
+            result[length - counter].append(lines)
 
-def loadJson():
-    global DATA_JSON_FILE_DATA
-    global KODE_FAKULTAS_JSON_FILE_DATA 
-    global KODE_JURUSAN_JSON_FILE_DATA
-    global LIST_FAKULTAS_JSON_FILE_DATA
-    global LIST_JURUSAN_JSON_FILE_DATA
-    global ALLDATA
+    print(result)
+    return result   
 
-    f = open (DATA_JSON_FILE_PATH, "r")
-    DATA_JSON_FILE_DATA = json.loads(f.read())
-    f.close()
-    f = open (KODE_FAKULTAS_JSON_FILE_PATH, "r")
-    KODE_FAKULTAS_JSON_FILE_DATA = json.loads(f.read())
-    f.close()
-    f = open (KODE_JURUSAN_JSON_FILE_PATH, "r")
-    KODE_JURUSAN_JSON_FILE_DATA = json.loads(f.read())
-    f.close()
-    f = open (LIST_FAKULTAS_JSON_FILE_PATH, "r")
-    LIST_FAKULTAS_JSON_FILE_DATA = json.loads(f.read())
-    f.close()
-    f = open (LIST_JURUSAN_JSON_FILE_PATH, "r")
-    LIST_JURUSAN_JSON_FILE_DATA = json.loads(f.read())
-    f.close()
-    ALLDATA = [KODE_FAKULTAS_JSON_FILE_DATA,KODE_JURUSAN_JSON_FILE_DATA,LIST_FAKULTAS_JSON_FILE_DATA,LIST_JURUSAN_JSON_FILE_DATA]
-
-def searchJson(word):
-    if word in IGNORED_WORDS:
-        return []
-
+def SearchJson(word):
     regexword = re.compile(r'\b'+re.escape(word)+r'\b', re.IGNORECASE)
-    # print(regexword)
-
+    
     listofkeys = []
-    for i,data in enumerate(ALLDATA):
+    for data in ALLDATA:
         for lines in data:
             kode = re.findall(regexword,lines)
             if(kode):
@@ -74,12 +95,13 @@ def searchJson(word):
                 listofkeys.append([lines,nimkode])
     return listofkeys
 
+def isAngkatan(num):
+    return len(num) == 2 and int(num) > 1 and int(num) < 25
+   
 def main():
-    loadJson()
-    listofkeys = (searchJson("fisika"))
-    print(listofkeys)
-    
+    loadJson() 
+    print(dissect("muhammad tito")) 
+    Search("vi vio ho")
     
 if __name__ == '__main__':
     main()
-    

@@ -1,7 +1,21 @@
-import os
-import psutil
+import re
 
-x = 7
-process = psutil.Process(os.getpid())
-print(psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2)
-print(process.memory_info().rss)  # in bytes 
+numlist = ["hi","you"]
+
+regex = ""
+regex += "(?=.*\d{3}"+str(19)+"\d{3})"
+regex += "(?=.*"+numlist[1]+")"
+
+print(regex)
+
+pattern = '(?=.*\d{3}19\d{3})(?=.*you)'
+
+print (pattern)
+
+string = " 1211923 2you"
+
+if(re.match(pattern,string)):
+    print("not empty")
+
+if(re.findall(regex,string)):
+    print("not emptyeeee")
