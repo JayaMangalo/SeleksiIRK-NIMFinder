@@ -1,0 +1,59 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIM-Finder-Inator</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <div class="title">NIM-Finder-Inator-Ver1.0<sup>TM</sup> Prototype</div>
+
+    <div class="searchbar">
+        <form action="search" method="post">
+            <div class="form-group">
+              <tr>
+                <td>
+                  {% csrf_token %}
+                  {{ form }}
+                </td>
+                <td>
+                  <button type="submit" class="btn">Search!</button>  
+                </td>
+              </tr>
+            </div>
+          </form>
+    </div>
+    
+    <div class="results">
+        {% if totalfound > 0 %}
+        <div class="display-info">Showing {{displayedmax}} from {{totalfound}} results</div>
+        {% for row in displayeddata %}
+        <table>
+            <tr>
+              <td class="left name">{{row.0}}</td>
+              <td class="right">{{row.1}}</td>
+            </tr>
+            <tr>
+              <td class="left">{{row.3}}</td>
+              <td class="right">{{row.2}}</td>
+            </tr>
+        </table>
+        {% endfor %}
+        {% endif %}
+    </div>
+    
+    {% if not isdisplayedall %}
+    <div class="showmore">
+      <form action="ShowMore" method="POST">
+        {% csrf_token %}
+        {{ form2 }}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="btn2">Show More</button>
+      </form>
+    </div>
+    {% endif %}
+</body>
+</html>

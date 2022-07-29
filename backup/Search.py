@@ -7,7 +7,7 @@ def Search(searchquery):
     if(not searchquery):
         return []
 
-    numlist,namelist,codelist = dissect(searchquery)
+    numlist,namelist,codelist = Dissect(searchquery)
 
     nimregex = ""
     for num in numlist:     

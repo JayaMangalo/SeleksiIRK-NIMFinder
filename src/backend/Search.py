@@ -1,30 +1,45 @@
+from copy import deepcopy
 import re
-from backend.JSONLoader import *
+from backend import JSONLoader as jsloader
+SEARCH_LIMIT = 200
 
 def Search(searchquery):
+    if(not jsloader.loaded):
+        jsloader.loadJson()
     if(not searchquery):
         return []
 
-    numlist,namelist,codelist = dissect(searchquery)
+    numlist,namelist,codelist = Dissect(searchquery)
 
-    nimregex = ""
+    highprionimregex = ""
     for num in numlist:     
         if isAngkatan(num):
-            nimregex += "(?=.*\d{3}"+str(num)+"\d{3})"
+            highprionimregex += "(?=.*\d{3}"+str(num)+"\d{3})"
         else:    
-            nimregex += "(?=.*"+num+")"
+            highprionimregex += "(?=.*"+num+")"
 
-    print(codelist)
+    lowprionimregex = []
     for code in codelist:
-        print ("ASDF")
-        nimregex += "(?=.*"+code[1]+")"
-    
-    print(nimregex)
+        lowprionimregex.append("(?=.*"+code[1]+"\d{5})")
 
-    datalist = SearchNIMRegex(nimregex)
+    # print("HIGH: ",highprionimregex)
+    # print("LOW: ",lowprionimregex)
+    # print("BAME:" ,namelist)
+
+    datalist = SearchNIMRegex(highprionimregex,lowprionimregex)
     datalist = SearchNameRegex(namelist,datalist)
 
-    return datalist
+    flat_list = []
+    for i in datalist:
+        if not i:
+            continue
+        if isinstance(i[0], str):
+            flat_list.append(i)
+        else:
+            for j in i:
+                flat_list.append(j)
+
+    return appendDatalist(flat_list[:SEARCH_LIMIT])
 
 def Dissect(searchquery):
     regexnum = re.compile(r"\d+", re.IGNORECASE)
@@ -43,24 +58,33 @@ def Dissect(searchquery):
                 codelist.append(cod)
         else:
             namelist.append(word)
-
-            
             
     return numlist,namelist,codelist
  
-def SearchNIMRegex(nimregex):
-    if not nimregex:
-        return DATA_JSON_FILE_DATA
+def SearchNIMRegex(highprionimregex,lowprionimregex):
+    if not highprionimregex and not lowprionimregex:
+        return deepcopy(jsloader.DATA_JSON_FILE_DATA)
 
     result = []
-    for lines in DATA_JSON_FILE_DATA:
-        # print(lines)
+    for lines in deepcopy(jsloader.DATA_JSON_FILE_DATA):
         if(len(lines) == 3):
-            if re.findall(nimregex,lines[1]) or re.findall(nimregex,lines[2]):
-                result.append(lines)
+            if lowprionimregex:
+                for regex in lowprionimregex:
+                    if re.findall(highprionimregex+regex,lines[2]):
+                        result.append(lines)
+                        break
+            else:
+                if re.findall(highprionimregex,lines[2]):
+                    result.append(lines)
         else:
-            if re.findall(nimregex,lines[1]):
-                result.append(lines)
+            if lowprionimregex:
+                for regex in lowprionimregex:
+                    if re.findall(highprionimregex+regex,lines[1]):
+                        result.append(lines)
+                        break
+            else:
+                if re.findall(highprionimregex,lines[1]):
+                    result.append(lines)
     return result
 
 def SearchNameRegex(namelist, datalist):
@@ -71,21 +95,20 @@ def SearchNameRegex(namelist, datalist):
     result = [[] for i in range(length)]
     
     for lines in datalist:
-        counter = 0
+        match_counter = 0
         for name in namelist:
             if re.findall(name,lines[0],re.IGNORECASE):
-                counter+=1    
-        if counter > 0:
-            result[length - counter].append(lines)
-
-    print(result)
+                match_counter+=1   
+        
+        if match_counter > 0:
+            result[length - match_counter].append(lines)
     return result   
 
 def SearchJson(word):
     regexword = re.compile(r'\b'+re.escape(word)+r'\b', re.IGNORECASE)
     
     listofkeys = []
-    for data in ALLDATA:
+    for data in jsloader.ALLDATA:
         for lines in data:
             kode = re.findall(regexword,lines)
             if(kode):
@@ -95,11 +118,34 @@ def SearchJson(word):
 
 def isAngkatan(num):
     return len(num) == 2 and int(num) > 1 and int(num) < 25
-   
+
+def getAngkatan(arr):
+    if(len(arr)== 1):
+        arr = arr[0]
+    if(len(arr) == 3):
+        kodejurusan = str(arr[2][:3])
+        for line in jsloader.INVERSED_LIST_JURUSAN:
+            if line == kodejurusan:
+                return jsloader.INVERSED_LIST_JURUSAN.get(line)
+    else:
+        kodefakultas = str(arr[1][:3])
+        for line in jsloader.INVERSED_LIST_FAKULTAS:
+            if line == kodefakultas:
+                return jsloader.INVERSED_LIST_FAKULTAS.get(line)
+
+def appendDatalist(datalist):
+    for lines in datalist:
+        lines.append(getAngkatan(lines))
+        if len(lines) == 3:
+            lines.insert(2,"-")
+    
+    return datalist
 def main():
-    loadJson() 
-    print(Dissect("muhammad tito")) 
-    Search("vi vio ho")
+    datalist = Search("vi vio ho")
+    print(len(datalist))
+    print(datalist)
+
+
     
 if __name__ == '__main__':
     main()
